@@ -2,158 +2,91 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>DNA 염기 서열 추론하기 - CT 과정</title>
+  <title>DNA 염기 서열 추론하기</title>
   <style>
-    body { font-family: '맑은 고딕', sans-serif; margin: 30px; background: #f8faff;}
-    h1 { margin-bottom: 8px; }
-    .desc, .rule, .problem { margin-bottom: 18px; }
-    .box { background: #fff; border: 1.5px solid #a9b1bc; padding: 16px; border-radius: 12px; margin-bottom: 18px;}
-    .tabmenu { display: flex; margin-bottom: 8px; }
-    .tabmenu button {
-      flex:1; padding: 12px 0; background: #e7ebf0; border:none; border-radius: 14px 14px 0 0;
-      font-weight:bold; cursor:pointer; font-size: 1.1em; color:#444; margin-right:2px;
-    }
-    .tabmenu button.active { background: #fff; border-bottom: 2px solid #fff; color:#1772e2;}
-    .tabpanel { display:none; }
-    .tabpanel.active { display:block; }
-    .timer { font-size: 1.13em; font-weight: bold; margin: 8px 0;}
-    input[type="text"] { width: 42px; text-align: center; font-size: 1.1em; margin-right:3px;}
-    button { font-size: 1em; padding: 7px 22px; margin-top: 12px;}
+    body { font-family: '맑은 고딕', sans-serif; margin: 30px; background: #f9f9f9;}
+    h1 { margin-bottom: 6px; }
+    .desc, .rule, .problem, .choices, .settings { margin-bottom: 20px; }
+    .box { background: #fff; border: 1.5px solid #aaa; padding: 16px; border-radius: 12px; margin-bottom: 18px;}
+    .timer { font-size: 1.18em; font-weight: bold; margin: 8px 0;}
+    input[type="text"] { width: 36px; text-align: center; font-size: 1.1em; }
+    button { font-size: 1em; padding: 8px 20px; margin-top: 12px;}
     .answer-row { margin-bottom: 8px; }
     .correct { color: #1a8806; font-weight: bold;}
     .wrong { color: #cf2222; font-weight: bold;}
     .hidden { display: none !important;}
-    .box select { margin-right: 14px;}
-    .choice-grid { display: flex; flex-wrap: wrap; gap:8px; }
-    .choice-btn { background: #e7f0fb; border-radius: 6px; padding: 8px 18px; cursor:pointer; border:none; font-size:1em;}
-    .choice-btn.selected { background: #1772e2; color:#fff;}
-    .tab-title { font-weight:bold; font-size:1.13em; color:#2b3c6b; margin-bottom:6px;}
+    .settings select { margin-right: 14px;}
+    #popup {
+      display: none;
+      position: fixed; top:0; left:0; width:100vw; height:100vh;
+      background:rgba(60,60,60,0.35);
+      justify-content: center; align-items: center; z-index:99;
+    }
+    #popup.active { display:flex !important;}
   </style>
 </head>
 <body>
   <h1>타이틀: DNA 염기 서열 추론하기</h1>
   <div class="desc"><b>대상 및 교과:</b> 고1 (통합과학1)</div>
 
-  <div class="box desc">
-    <b>문제 상황</b><br>
+  <div class="desc box">
+    <b>지문</b><br>
     비버는 어떤 생물의 DNA 조각을 분석하고 있다.<br>
-    DNA는 이중 나선 구조이며, 각 염기는 상보적인 염기와 결합한다.<br>
-    (규칙: A &harr; T, G &harr; C)
+    DNA는 이중 나선 구조이며, 각 염기는 상보적인 염기와 결합한다.
   </div>
 
-  <div class="box" style="margin-bottom:10px;">
-    <b>CT(컴퓨팅 사고) 단계별 문제 풀이</b><br>
-    각 단계를 차례로 눌러가며 문제를 해결해 보세요.
+  <div class="rule box">
+    <b>규칙</b><br>
+    염기쌍의 결합 규칙은 다음과 같다.<br>
+    ▶ <b>규칙1:</b> A &harr; T<br>
+    ▶ <b>규칙2:</b> G &harr; C
   </div>
 
-  <!-- 탭 메뉴 -->
-  <div class="tabmenu">
-    <button type="button" class="active" onclick="showTab(0)">1. 문제 분해</button>
-    <button type="button" onclick="showTab(1)">2. 추상화</button>
-    <button type="button" onclick="showTab(2)">3. 패턴 찾기</button>
-    <button type="button" onclick="showTab(3)">4. 알고리즘</button>
+  <div class="settings box">
+    <b>기본 정보 설정</b><br>
+    염기서열의 수(길이) :
+    <select id="lenSel">
+      <option value="8">8</option>
+      <option value="10" selected>10</option>
+      <option value="12">12</option>
+      <option value="14">14</option>
+    </select>
+    제한 시간 :
+    <select id="timeSel">
+      <option value="30">30초</option>
+      <option value="60" selected>1분</option>
+      <option value="90">1분 30초</option>
+      <option value="120">2분</option>
+    </select>
+    <button onclick="startQuiz()">문제 풀기</button>
   </div>
 
-  <!-- 탭별 패널 영역 -->
-  <div id="tab0" class="tabpanel active">
-    <div class="tab-title">문제 분해: 주어진 문제를 요소로 나누어 보기</div>
-    <div class="box">
-      <b>예시:</b><br>
-      문제: "5′– ? T A G G ? C ? T A –3′<br>
-      3′–  A ? ? C C A G T G ? ? –5′<br>
-      <br>
-      각 가닥의 주어진 정보와 빈칸( ? )의 개수, 양쪽 가닥에서 알 수 있는 염기쌍 수, 추론해야 할 위치 등<br>
-      <b>문제를 세부 요소로 분해해서 아래에 입력해보세요.</b>
-      <br><br>
-      <textarea id="breakdownArea" rows="5" style="width:98%;"></textarea>
-      <br>
-      <button onclick="submitBreakdown()">입력 완료</button>
-      <div id="breakdownResult"></div>
+  <div id="quizArea" class="hidden">
+    <div class="problem box" id="probBox">
+      <b>문제</b><br>
+      비버는 DNA 이중 가닥의 염기를 관찰하고 기록하였으나 몇 개의 염기가 가려져 있어 보이지 않는다.<br>
+      관찰된 염기 정보를 바탕으로 보이지 않는 염기를 올바르게 유추했을 때<br>
+      <b>5′→3′ 방향의 전체 가닥 서열은 무엇인가?</b>
     </div>
+    <div class="choices box" id="choiceBox"></div>
+    <div class="timer" id="timer"></div>
+    <form id="ansForm" onsubmit="return checkAnswer();">
+      <div id="inputRow" class="answer-row"></div>
+      <button type="submit" id="submitBtn">정답 제출</button>
+    </form>
+    <div id="resultMsg"></div>
   </div>
 
-  <div id="tab1" class="tabpanel">
-    <div class="tab-title">추상화: 핵심 정보 뽑아내기</div>
-    <div class="box">
-      <b>문제에서 추론에 꼭 필요한 정보만 골라 체크하세요.</b>
-      <br><br>
-      <div><input type="checkbox" id="ab1"> 상보적 염기쌍의 규칙 (A-T, G-C)</div>
-      <div><input type="checkbox" id="ab2"> 한 가닥에서 빈칸의 위치</div>
-      <div><input type="checkbox" id="ab3"> 빈칸 아닌 염기의 위치와 종류</div>
-      <div><input type="checkbox" id="ab4"> DNA 전체 길이(염기서열 길이)</div>
-      <div><input type="checkbox" id="ab5"> 감춰진 곳이 양쪽에 동시에 있으면 안 된다는 조건</div>
-      <br>
-      <button onclick="submitAbstraction()">제출</button>
-      <div id="abstractionResult"></div>
-    </div>
-  </div>
-
-  <div id="tab2" class="tabpanel">
-    <div class="tab-title">패턴(규칙) 찾기: 상보적 염기쌍 찾기</div>
-    <div class="box">
-      <b>다음 주어진 한쪽 가닥 염기서열에 대해, 상보적인 다른 쪽 염기서열을 입력하세요.</b>
-      <br><br>
-      <div id="patternProb"></div>
-      <div id="patternInput"></div>
-      <button onclick="checkPattern()">정답 확인</button>
-      <div id="patternResult"></div>
-    </div>
-  </div>
-
-  <div id="tab3" class="tabpanel">
-    <div class="tab-title">알고리즘: 단계별로 염기서열 추론</div>
-    <div class="box">
-      <b>보기:</b><br>
-      <span id="algProb"></span>
-      <br><br>
-      <b>빈칸( ? ) 부분에 들어갈 염기를 직접 입력해 보세요.</b><br>
-      <div id="algInput"></div>
-      <button onclick="checkAlg()">정답 확인</button>
-      <div id="algResult"></div>
+  <!-- 종료 팝업 -->
+  <div id="popup">
+    <div style="background:#fff; border-radius:14px; padding:40px 40px 24px 40px; min-width:280px; box-shadow:0 4px 32px rgba(0,0,0,0.16); text-align:center;">
+      <div style="font-size:1.4em; margin-bottom:22px;">종료되었습니다</div>
+      <button onclick="restartQuiz()">다시 도전</button>
     </div>
   </div>
 
   <script>
-    // 탭 전환
-    function showTab(idx) {
-      let tabs = document.querySelectorAll('.tabpanel');
-      let btns = document.querySelectorAll('.tabmenu button');
-      tabs.forEach((el, i) => el.classList.toggle('active', i===idx));
-      btns.forEach((el, i) => el.classList.toggle('active', i===idx));
-      if(idx === 2) genPatternProb();
-      if(idx === 3) genAlgProb();
-    }
-
-    // -------------------- 문제 분해 --------------------
-    function submitBreakdown() {
-      const txt = document.getElementById('breakdownArea').value.trim();
-      if(txt.length < 20) {
-        document.getElementById('breakdownResult').innerHTML = '<span class="wrong">조금 더 자세히 분해해 주세요!</span>';
-      } else {
-        document.getElementById('breakdownResult').innerHTML = '<span class="correct">잘했어요! 각 요소를 세분화해 보는 과정이 중요합니다.</span>';
-      }
-    }
-
-    // -------------------- 추상화 --------------------
-    function submitAbstraction() {
-      let score = 0;
-      if(document.getElementById('ab1').checked) score++;
-      if(document.getElementById('ab2').checked) score++;
-      if(document.getElementById('ab3').checked) score++;
-      if(document.getElementById('ab4').checked) score++;
-      if(document.getElementById('ab5').checked) score++;
-      let msg = '';
-      if(score >= 4) msg = '<span class="correct">핵심 정보 추출 완료! 모든 핵심 요소를 잘 선택했어요.</span>';
-      else msg = '<span class="wrong">필요한 핵심 정보를 모두 선택했는지 다시 확인해보세요.</span>';
-      document.getElementById('abstractionResult').innerHTML = msg;
-    }
-
-    // -------------------- 패턴(규칙) 찾기 --------------------
-    let patSeq = [], patAns = [];
-    function randomBase() {
-      const b = ['A','T','G','C'];
-      return b[Math.floor(Math.random()*4)];
-    }
+    // 상보적 염기
     function compBase(x) {
       if(x==='A') return 'T';
       if(x==='T') return 'A';
@@ -161,88 +94,123 @@
       if(x==='C') return 'G';
       return '?';
     }
-    function genPatternProb() {
-      // 8~10개 랜덤 서열
-      let len = 8 + Math.floor(Math.random()*3);
-      patSeq = [];
-      for(let i=0;i<len;i++) patSeq.push(randomBase());
-      patAns = patSeq.map(compBase);
-      document.getElementById('patternProb').innerHTML =
-        '<b>5′– ' + patSeq.join(' ') + ' –3′</b>';
-      let inp = '';
-      for(let i=0;i<len;i++) {
-        inp += `<input type="text" maxlength="1" id="pat_in${i}" style="width:36px;" autocomplete="off" required>`;
-      }
-      document.getElementById('patternInput').innerHTML = '상보적 가닥(3′– ... –5′): ' + inp;
-      document.getElementById('patternResult').innerHTML = '';
-    }
-    function checkPattern() {
-      let correct = true;
-      for(let i=0;i<patSeq.length;i++) {
-        let v = (document.getElementById('pat_in'+i).value || '').toUpperCase();
-        if(v !== patAns[i]) correct = false;
-      }
-      document.getElementById('patternResult').innerHTML =
-        correct
-        ? '<span class="correct">정답입니다! 🎉</span>'
-        : '<span class="wrong">오답입니다. 다시 한 번 규칙을 적용해 보세요.</span>';
+    function randomBase() {
+      const b = ['A','T','G','C'];
+      return b[Math.floor(Math.random()*4)];
     }
 
-    // -------------------- 알고리즘 --------------------
-    let algSeq = [], algCompSeq = [], algHideIdx = [];
-    function genAlgProb() {
-      // 10~12개 서열, 윗줄에만 3~4개 랜덤 ? (아랫줄은 모두 보임)
-      let len = 10 + Math.floor(Math.random()*3);
-      algSeq = [], algCompSeq = [];
-      for(let i=0;i<len;i++) algSeq.push(randomBase());
-      algCompSeq = algSeq.map(compBase);
-      let hideCount = 3 + Math.floor(Math.random()*2);
+    // 전역 변수
+    let answerSeq = [], compSeq = [], questionSeq = [];
+    let answerIndex = []; // 가릴 인덱스
+    let timer = null, remain = 0, quizLength = 10, quizSeconds = 60;
+
+    // 팝업 제어
+    function showPopup() {
+      document.getElementById('popup').classList.add('active');
+    }
+    function hidePopup() {
+      document.getElementById('popup').classList.remove('active');
+    }
+
+    function startQuiz() {
+      // 값 설정
+      quizLength = parseInt(document.getElementById('lenSel').value);
+      quizSeconds = parseInt(document.getElementById('timeSel').value);
+
+      // 랜덤 서열 생성
+      answerSeq = [];
+      for(let i=0;i<quizLength;i++) answerSeq.push(randomBase());
+      compSeq = answerSeq.map(compBase);
+
+      // ?로 가릴 인덱스 (랜덤 2~3개, 윗줄만 가린다)
+      let hideCount = Math.max(2, Math.floor(quizLength/3));
       let idxSet = new Set();
       while(idxSet.size < hideCount) {
-        let idx = Math.floor(Math.random()*len);
-        if(idx!==0 && idx!==(len-1)) idxSet.add(idx);
+        let idx = Math.floor(Math.random()*quizLength);
+        if(idx!==0 && idx!==(quizLength-1)) idxSet.add(idx);
       }
-      algHideIdx = Array.from(idxSet);
-      // 문제 보기
-      let qSeq = algSeq.slice();
-      algHideIdx.forEach(idx => { qSeq[idx] = '?'; });
-      document.getElementById('algProb').innerHTML =
-        `<span style="font-family:Consolas,monospace">5′– ${qSeq.join(' ')} –3′</span><br>
-         <span style="font-family:Consolas,monospace">3′– ${algCompSeq.join(' ')} –5′</span>`;
-      // 입력란
-      let inp = '';
-      for(let i=0;i<len;i++) {
-        if(algHideIdx.includes(i)) {
-          inp += `<input type="text" maxlength="1" id="alg_in${i}" style="width:36px;" autocomplete="off" required> `;
+      answerIndex = Array.from(idxSet);
+
+      // 문제 제시
+      // 윗줄은 일부 ?로, 아랫줄은 무조건 전부 채워짐(상보적 염기)
+      questionSeq = answerSeq.slice();
+      answerIndex.forEach(idx => { questionSeq[idx] = '?'; });
+
+      // 보기 제시 (윗줄: 일부 ?, 아랫줄: 전부 채워짐)
+      let up = questionSeq.join(' ');
+      let dn = compSeq.join(' ');
+      document.getElementById('choiceBox').innerHTML = `
+        <b>보기</b><br>
+        <span style="font-family:Consolas,monospace">5′– ${up} –3′</span><br>
+        <span style="font-family:Consolas,monospace">3′– ${dn} –5′</span>
+      `;
+
+      // 입력창 (윗줄에만 입력칸, 아랫줄은 힌트로 모두 제공)
+      let inputRow = '';
+      for(let i=0;i<quizLength;i++) {
+        if(answerIndex.includes(i)) {
+          inputRow += `<input type="text" maxlength="1" size="1" pattern="[ATGC]" title="A/T/G/C" id="input${i}" autocomplete="off" required> `;
         } else {
-          inp += `<input type="text" maxlength="1" style="width:36px;background:#eee;" disabled value="${algSeq[i]}"> `;
+          inputRow += `<input type="text" maxlength="1" size="1" disabled style="background:#eee; font-weight:bold" value="${answerSeq[i]}"> `;
         }
       }
-      document.getElementById('algInput').innerHTML = '5′– ' + inp + '–3′';
-      document.getElementById('algResult').innerHTML = '';
-    }
-    function checkAlg() {
-      let correct = true;
-      for(let i of algHideIdx) {
-        let v = (document.getElementById('alg_in'+i).value || '').toUpperCase();
-        if(v !== algSeq[i]) correct = false;
-      }
-      document.getElementById('algResult').innerHTML =
-        correct
-        ? '<span class="correct">정답입니다! 🎉</span>'
-        : '<span class="wrong">오답입니다. 한 번 더 생각해 보세요.</span>';
+      document.getElementById('inputRow').innerHTML = '5′– ' + inputRow + '–3′';
+
+      // 영역 표시
+      document.getElementById('quizArea').classList.remove('hidden');
+      document.getElementById('resultMsg').innerText = '';
+      document.getElementById('submitBtn').disabled = false;
+
+      // 타이머 세팅
+      clearInterval(timer);
+      remain = quizSeconds;
+      document.getElementById('timer').innerText = `남은 시간: ${remain}초`;
+      hidePopup();
+
+      timer = setInterval(() => {
+        remain--;
+        document.getElementById('timer').innerText = `남은 시간: ${remain}초`;
+        if(remain <= 0) {
+          finishQuiz();
+        }
+      }, 1000);
     }
 
-    // 페이지 첫 진입 시, 각종 패널/문제 초기화
-    window.onload = function() {
-      showTab(0);
-      document.getElementById('breakdownArea').value = '';
-      document.getElementById('breakdownResult').innerText = '';
-      ['ab1','ab2','ab3','ab4','ab5'].forEach(id=>{ document.getElementById(id).checked = false; });
-      document.getElementById('abstractionResult').innerText = '';
-      genPatternProb();
-      genAlgProb();
+    // 타임업 처리
+    function finishQuiz() {
+      clearInterval(timer);
+      document.getElementById('timer').innerText = '시간 종료!';
+      document.getElementById('submitBtn').disabled = true;
+      showPopup();
     }
+
+    function restartQuiz() {
+      hidePopup();
+      startQuiz();
+    }
+
+    function checkAnswer() {
+      let allCorrect = true;
+      answerIndex.forEach(idx=>{
+        let userVal = (document.getElementById('input'+idx).value||'').toUpperCase();
+        if(userVal !== answerSeq[idx]) allCorrect = false;
+      });
+      if(allCorrect) {
+        document.getElementById('resultMsg').innerHTML = `<span class="correct">정답입니다! 🎉</span>`;
+        clearInterval(timer);
+        document.getElementById('submitBtn').disabled = true;
+      } else {
+        document.getElementById('resultMsg').innerHTML = `<span class="wrong">오답입니다. 다시 시도하세요!</span>`;
+      }
+      return false; // submit 차단
+    }
+
+    // 첫 화면에서는 퀴즈/팝업 다 숨김
+    window.onload = function() {
+      document.getElementById('quizArea').classList.add('hidden');
+      hidePopup();
+      clearInterval(timer);
+    };
   </script>
 </body>
 </html>

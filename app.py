@@ -1,10 +1,10 @@
 import streamlit as st
 
-st.set_page_config(layout="wide")
+st.set_page_config(layout="wide", page_title='DNA sequencying')
 
 import streamlit.components.v1 as htmlviewer
 # Title Msg#1
-st.title('DNA 염기서열로부터 단백질의 아미노산 서열 추론하기')
+st.title('DNA 이중나선의 염기서열 추론하기')
 
 with open('./index.html','r', encoding='utf-8') as f:
     html = f.read()
@@ -28,8 +28,8 @@ with open('./index.html','r', encoding='utf-8') as f:
 col1, col2 = st.columns((6,1))
 with col1:
     with st.expander('Contents #1'):
-        url = 'https://youtu.be/gG7uCskUOrA?si=UHljvVKLPGJFPm37'
-        st.info('전사-번역 과정 참고 영상')
+        url = 'https://youtu.be/89YbXYPu50c?si=ucF84JOB_Gsn_vRd'
+        st.info('참고 영상: DNA란 무엇인가?')
         st.video(url)
 
     with st.expander('Contents #2'):
