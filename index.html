@@ -26,7 +26,7 @@
   </style>
 </head>
 <body>
-  <h1>타이틀: DNA 염기 서열 추론하기</h1>
+  <h1>DNA 염기 서열 추론하기</h1>
   <div class="desc"><b>대상 및 교과:</b> 고1 (통합과학1)</div>
 
   <div class="desc box">
@@ -73,6 +73,7 @@
     <form id="ansForm" onsubmit="return checkAnswer();">
       <div id="inputRow" class="answer-row"></div>
       <button type="submit" id="submitBtn">정답 제출</button>
+      <button type="button" id="exitBtn" onclick="exitQuiz()" style="margin-left:12px;">종료</button>
     </form>
     <div id="resultMsg"></div>
   </div>
@@ -123,7 +124,7 @@
       compSeq = answerSeq.map(compBase);
 
       // ?로 가릴 인덱스 (랜덤 2~3개, 윗줄만 가린다)
-      let hideCount = Math.max(2, Math.floor(quizLength/3));
+      let hideCount = Math.max(2, Math.floor(quizLength/4));
       let idxSet = new Set();
       while(idxSet.size < hideCount) {
         let idx = Math.floor(Math.random()*quizLength);
@@ -134,7 +135,7 @@
       // 문제 제시
       // 윗줄은 일부 ?로, 아랫줄은 무조건 전부 채워짐(상보적 염기)
       questionSeq = answerSeq.slice();
-      answerIndex.forEach(idx => { questionSeq[idx] = '?'; });
+      answerIndex.forEach(idx => { questionSeq[idx] = '□'; });
 
       // 보기 제시 (윗줄: 일부 ?, 아랫줄: 전부 채워짐)
       let up = questionSeq.join(' ');
@@ -147,14 +148,18 @@
 
       // 입력창 (윗줄에만 입력칸, 아랫줄은 힌트로 모두 제공)
       let inputRow = '';
-      for(let i=0;i<quizLength;i++) {
+        for(let i=0;i<quizLength;i++) {
         if(answerIndex.includes(i)) {
-          inputRow += `<input type="text" maxlength="1" size="1" pattern="[ATGC]" title="A/T/G/C" id="input${i}" autocomplete="off" required> `;
-        } else {
-          inputRow += `<input type="text" maxlength="1" size="1" disabled style="background:#eee; font-weight:bold" value="${answerSeq[i]}"> `;
-        }
-      }
-      document.getElementById('inputRow').innerHTML = '5′– ' + inputRow + '–3′';
+       // 입력칸 (정답 입력)
+       inputRow += `<input type="text" maxlength="1" size="1" pattern="[ATGC]" title="A/T/G/C" id="input${i}" autocomplete="off" required style="text-align:center; width:32px; height:32px; margin-bottom:3px;"> `;
+       } else {
+        // 사각형 박스 (정답 공개)
+       inputRow += `<span style="display:inline-block; width:32px; height:32px; border:1.5px solid #aaa; border-radius:6px; line-height:32px; background:#eee; font-weight:bold; text-align:center; font-size:1.08em; margin-bottom:3px;">
+        ${answerSeq[i]}
+      </span> `;
+  }
+}
+document.getElementById('inputRow').innerHTML = '5′– ' + inputRow + '–3′';
 
       // 영역 표시
       document.getElementById('quizArea').classList.remove('hidden');
@@ -176,7 +181,7 @@
       }, 1000);
     }
 
-    // 타임업 처리
+     // 타임업 처리
     function finishQuiz() {
       clearInterval(timer);
       document.getElementById('timer').innerText = '시간 종료!';
@@ -205,6 +210,18 @@
       return false; // submit 차단
     }
 
+       function exitQuiz() {
+      // 타이머 정지
+      clearInterval(timer);
+      // 결과 내용 및 입력 폼, 문제 영역 숨김
+     document.getElementById('quizArea').classList.add('hidden');
+      // 결과 메시지 제거 및 타이머 내용 클리어
+      document.getElementById('resultMsg').innerText = '';
+      document.getElementById('timer').innerText = '';
+      // 팝업도 닫기
+     hidePopup();
+    }
+    
     // 첫 화면에서는 퀴즈/팝업 다 숨김
     window.onload = function() {
       document.getElementById('quizArea').classList.add('hidden');

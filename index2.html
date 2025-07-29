@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>DNA 염기서열로부터 단백질의 아미노산 추론하기</title>
+  <style>
+    .el-grid {
+      display: flex;
+      gap: 0.12em;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      justify-content: flex-start;
+    }
+    .el-grid input {
+      width: 1.4em; min-width:1.4em; max-width:1.6em;
+      text-align: center;
+      font-size: 1.15em;
+      border: 1px solid #b2bcd1;
+      border-radius: 4px;
+      padding: 2px;
+      background: #f7fafc;
+    }
+    .el-grid input[readonly] {
+      background: #e2e6ed;
+    }
+    body { font-family: '맑은 고딕', Arial, sans-serif; margin: 24px; background: #f6f8fb; color: #222; }
+    .title { font-size: 2em; font-weight: bold; margin-bottom: 0.2em;}
+    .subtitle { font-size: 1.1em; margin-bottom: 0.7em; color: #004aac; }
+    .section { background: #fff; padding: 1em 1.2em; border-radius: 10px; margin-bottom: 1.5em; box-shadow: 0 2px 8px #0001;}
+    .box { background: #eef1f7; padding: 1em; border-radius: 8px; font-family: 'Consolas', 'monospace'; font-size: 1.05em; }
+    label { margin-right: 1em; }
+    select, button { font-size: 1em; margin-right: 0.7em; padding: 0.2em 0.6em; }
+    #timer { font-size: 1.2em; font-weight: bold; color: #ba2222; }
+    .question-box { margin: 1em 0; }
+    .controls { margin-bottom: 0.7em;}
+    .result { margin: 1em 0; padding: 0.7em; border-radius: 6px; background: #e7ffe7; font-weight: bold; color: #145C11;}
+    .input-answer { width: 90%; padding: 0.2em 0.6em; margin-bottom: 0.5em;}
+    .hidden { display: none; }
+    .popup {
+      position: fixed; left: 0; top: 0; width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.24); z-index: 1000;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .popup-content {
+      background: #fff; padding: 2em 2.2em; border-radius: 12px;
+      text-align: center; box-shadow: 0 3px 16px #0003;
+    }
+    .popup-content button { margin: 0.6em 1.3em 0 1.3em; }
+    .codon-table-wrap {
+      overflow-x: auto; margin-top: 1em; margin-bottom: 1em;
+    }
+    table.codon-table { border-collapse: collapse; margin: 0 auto; min-width: 720px; font-size: 0.98em;}
+    .codon-table th, .codon-table td { border: 1px solid #b2bcd1; padding: 0.33em 0.6em; text-align: center;}
+    .codon-table th { background: #e6ecfa; }
+    .codon-table .start { background: #f8ffe2; font-weight: bold; }
+    .codon-table .stop { background: #ffe6e6; font-weight: bold; color: #c00; }
+    .codon-table .aa { color: #155d11; }
+    .codon-table .row-label { font-weight: bold; background: #d7e7fb; }
+    .codon-table .col-label { font-weight: bold; background: #e6ecfa; }
+    .codon-table caption { caption-side: top; font-weight: bold; font-size: 1.1em; padding: 0.5em 0; }
+    @media (max-width: 900px) {
+      table.codon-table { font-size: 0.85em; min-width: 460px; }
+      .codon-table-wrap { max-width: 98vw; }
+    }
+  </style>
+</head>
+<body>
+  <div class="title">DNA 염기서열로부터 단백질의 아미노산 추론하기</div>
+  <div class="subtitle">대상 및 교과: 고1 (통합과학1)</div>
+
+  <div class="section">
+    <strong>지문</strong><br>
+    비버는 DNA 가닥을 이용해 단백질을 만드는 실험을 하고 있다.<br>
+    단백질은 다음과 같은 과정을 통해 만들어진다.<br>
+    [1단계] 전사: DNA → RNA <br>
+    [2단계] 번역: RNA → 단백질
+  </div>
+
+  <div class="section">
+    <strong>규칙</strong><br>
+    <u>[1단계] 전사 규칙</u><br>
+    1) A → U &nbsp; 2) T → A &nbsp; 3) G → C &nbsp; 4) C → G<br>
+    <u>[2단계] 번역 규칙</u><br>
+    1) RNA의 염기는 3개씩 묶어서 코돈으로 인식<br>
+    2) 번역은 항상 'AUG(개시코돈)'에서 시작하여, UAA, UAG, UGA가 나오면 중단<br>
+    3) 코돈-아미노산 관계는 아래 표 참고
+    <div class="codon-table-wrap" style="overflow-x:auto;margin-top:1em;margin-bottom:1em;">
+      <table class="codon-table" style="border-collapse:collapse;min-width:950px;margin:0 auto;font-size:1em;">
+      <caption style="caption-side:top;font-weight:bold;font-size:1.1em;padding:0.5em 0;">
+        유전 암호표 (RNA 코돈 - 아미노산)
+      </caption>
+      <tbody>
+        <tr>
+          <td>UUU<br><span>phe</span></td>
+          <td>UUC<br><span>phe</span></td>
+          <td>UUA<br><span>leu</span></td>
+          <td>UUG<br><span>leu</span></td>
+          <td>CUU<br><span>leu</span></td>
+          <td>CUC<br><span>leu</span></td>
+          <td>CUA<br><span>leu</span></td>
+          <td>CUG<br><span>leu</span></td>
+        </tr>
+        <tr>
+          <td>UCU<br><span>ser</span></td>
+          <td>UCC<br><span>ser</span></td>
+          <td>UCA<br><span>ser</span></td>
+          <td>UCG<br><span>ser</span></td>
+          <td>CCU<br><span>pro</span></td>
+          <td>CCC<br><span>pro</span></td>
+          <td>CCA<br><span>pro</span></td>
+          <td>CCG<br><span>pro</span></td>
+        </tr>
+        <tr>
+          <td>UAU<br><span>tyr</span></td>
+          <td>UAC<br><span>tyr</span></td>
+          <td class="stop">UAA<br>STOP</td>
+          <td class="stop">UAG<br>STOP</td>
+          <td>CAU<br><span>his</span></td>
+          <td>CAC<br><span>his</span></td>
+          <td>CAA<br><span>gln</span></td>
+          <td>CAG<br><span>gln</span></td>
+        </tr>
+        <tr>
+          <td>UGU<br><span>cys</span></td>
+          <td>UGC<br><span>cys</span></td>
+          <td class="stop">UGA<br>STOP</td>
+          <td>UGG<br><span>trp</span></td>
+          <td>CGU<br><span>arg</span></td>
+          <td>CGC<br><span>arg</span></td>
+          <td>CGA<br><span>arg</span></td>
+          <td>CGG<br><span>arg</span></td>
+        </tr>
+        <tr>
+          <td>AUU<br><span>ile</span></td>
+          <td>AUC<br><span>ile</span></td>
+          <td>AUA<br><span>ile</span></td>
+          <td class="start">AUG<br>met</td>
+          <td>GUU<br><span>val</span></td>
+          <td>GUC<br><span>val</span></td>
+          <td>GUA<br><span>val</span></td>
+          <td>GUG<br><span>val</span></td>
+        </tr>
+        <tr>
+          <td>ACU<br><span>thr</span></td>
+          <td>ACC<br><span>thr</span></td>
+          <td>ACA<br><span>thr</span></td>
+          <td>ACG<br><span>thr</span></td>
+          <td>GCU<br><span>ala</span></td>
+          <td>GCC<br><span>ala</span></td>
+          <td>GCA<br><span>ala</span></td>
+          <td>GCG<br><span>ala</span></td>
+        </tr>
+        <tr>
+          <td>AAU<br><span>asn</span></td>
+          <td>AAC<br><span>asn</span></td>
+          <td>AAA<br><span>lys</span></td>
+          <td>AAG<br><span>lys</span></td>
+          <td>GAU<br><span>asp</span></td>
+          <td>GAC<br><span>asp</span></td>
+          <td>GAA<br><span>glu</span></td>
+          <td>GAG<br><span>glu</span></td>
+        </tr>
+        <tr>
+          <td>AGU<br><span>ser</span></td>
+          <td>AGC<br><span>ser</span></td>
+          <td>AGA<br><span>arg</span></td>
+          <td>AGG<br><span>arg</span></td>
+          <td>GGU<br><span>gly</span></td>
+          <td>GGC<br><span>gly</span></td>
+          <td>GGA<br><span>gly</span></td>
+          <td>GGG<br><span>gly</span></td>
+        </tr>
+      </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="qtitle">문제 유형 설정</div>
+    <label>염기서열 길이(난이도):
+      <select id="seqLenSel">
+        <option value="20">20개</option>
+        <option value="30">30개</option>
+        <option value="40">40개</option>
+      </select>
+    </label>
+    <label>제한 시간:
+      <select id="timeSel">
+        <option value="30">30초</option>
+        <option value="60">1분</option>
+        <option value="90">1분 30초</option>
+        <option value="120">2분</option>
+      </select>
+    </label>
+    <button class="step-btn" style="margin-left:1em;" id="startBtn">문제 풀기</button>
+    <span id="timer"></span>
+    <button class="step-btn" style="background:#ac2b2b;" id="quitBtn" hidden>종료</button>
+  </div>
+
+  <!-- 1단계: 전사 -->
+  <div class="section hidden" id="step1-section">
+    <div class="qtitle">[1단계: 전사] DNA 서열을 RNA 서열로 변환하세요.</div>
+    <div>아래 DNA 염기서열을 [1단계] 전사 규칙에 따라 RNA 염기로 변환하여 각 칸에 입력하세요.</div>
+    <div class="dnabox el-grid" id="dna-grid"></div>
+    <div style="margin-bottom:0.5em; color:#888;">규칙: A→U, T→A, G→C, C→G</div>
+    <div class="el-grid" id="rna-grid"></div>
+    <button class="step-btn" id="submit1-btn">제출하기</button>
+    <span class="result-msg" id="step1-msg"></span>
+    <button class="step-btn" style="background:#2a923a;" id="go2-btn" hidden>2단계: 번역하기</button>
+  </div>
+
+  <!-- 2단계: 번역 -->
+  <div class="section hidden" id="step2-section">
+    <div class="qtitle">[2단계: 번역] RNA 서열을 아미노산 서열로 변환하세요.</div>
+    <div>
+      아래 <b>RNA 염기서열</b>을 3개씩 코돈 단위로 스스로 나눠<br>
+      <b>아미노산 3글자 약어</b>로 차례로 입력하세요.<br>
+      예시: met, ser, gly, STOP 등<br>
+      (정답: 개시코돈(AUG/met)부터 STOP까지)
+    </div>
+    <div class="el-grid" id="amino-grid"></div>
+    <button class="step-btn" id="submit2-btn">제출하기</button>
+    <span class="result-msg" id="step2-msg"></span>
+    <button class="step-btn" style="background:#ba3232;" id="edit2-btn" hidden>아미노산 수정하기</button>
+  </div>
+     
+  <!-- 팝업 -->
+  <div id="popup" class="popup hidden" style="display:none;">
+    <div class="popup-content">
+     <div id="popup-msg" style="margin-bottom:1em;"></div>
+     <button class="step-btn" id="retryBtn">다시 도전</button>
+     <button class="step-btn" style="background:#ba3232;" id="popupQuitBtn">종료</button>
+    </div>
+  </div>
+
+  <script>
+    // --- 유전암호 테이블
+    let codonTable = {
+      UUU:'phe', UUC:'phe', UUA:'leu', UUG:'leu',
+      CUU:'leu', CUC:'leu', CUA:'leu', CUG:'leu',
+      AUU:'ile', AUC:'ile', AUA:'ile', AUG:'met',
+      GUU:'val', GUC:'val', GUA:'val', GUG:'val',
+      UCU:'ser', UCC:'ser', UCA:'ser', UCG:'ser',
+      CCU:'pro', CCC:'pro', CCA:'pro', CCG:'pro',
+      ACU:'thr', ACC:'thr', ACA:'thr', ACG:'thr',
+      GCU:'ala', GCC:'ala', GCA:'ala', GCG:'ala',
+      UAU:'tyr', UAC:'tyr', UAA:'STOP', UAG:'STOP',
+      CAU:'his', CAC:'his', CAA:'gln', CAG:'gln',
+      AAU:'asn', AAC:'asn', AAA:'lys', AAG:'lys',
+      GAU:'asp', GAC:'asp', GAA:'glu', GAG:'glu',
+      UGU:'cys', UGC:'cys', UGA:'STOP', UGG:'trp',
+      CGU:'arg', CGC:'arg', CGA:'arg', CGG:'arg',
+      AGU:'ser', AGC:'ser', AGA:'arg', AGG:'arg',
+      GGU:'gly', GGC:'gly', GGA:'gly', GGG:'gly'
+    };
+    let dnaSeq = "", rnaAns = "", codons = [], aminoAns = [], timer = null, timeLeft = 0;
+
+    function randomDNA(len) {
+      let arr = Array.from({length:len}, _ => "ATGC"[Math.floor(Math.random()*4)]);
+      let posTAC = Math.floor(Math.random()*5); arr.splice(posTAC,3,'T','A','C');
+      let endMotif = ["ATT","ATC","ACT"][Math.floor(Math.random()*3)];
+      let posEnd = len-7 + Math.floor(Math.random()*4); if(posEnd+3>len)posEnd=len-3;
+      arr.splice(posEnd,3,...endMotif.split(''));
+      return arr.join('');
+    }
+    function transcribe(dna) {
+      return dna.replace(/A|T|G|C/g, m => m==='A'?'U':m==='T'?'A':m==='G'?'C':'G');
+    }
+    // RNA 전체를 3개씩 코돈 분할
+    function rnaToCodons(rna) {
+        let result = [];
+        for(let i=0; i<rna.length-2; i+=3) result.push(rna.substr(i,3));
+        return result;
+    }
+    function getTranslationRangeCodons(codons) {
+        // 개시~STOP까지 해당 코돈들만 반환
+        let start = codons.indexOf('AUG');
+        if (start === -1) return []; // 개시 없으면 없음
+        let arr = [];
+        for(let i=start; i<codons.length; ++i) {
+            arr.push(codons[i]);
+            if(codonTable[codons[i]] === 'STOP') break;
+        }
+        return arr;
+    }
+    function resetAll() {
+      stopTimer();
+      hidePopup();
+      document.getElementById('step1-section').classList.remove('hidden');
+      document.getElementById('step2-section').classList.add('hidden');
+      document.getElementById('timer').textContent = '';
+    }
+    function drawStep1() {
+      document.getElementById('step1-section').classList.remove('hidden');
+      document.getElementById('step2-section').classList.add('hidden');
+      let dnaGrid = document.getElementById('dna-grid'), rnaGrid = document.getElementById('rna-grid');
+      dnaGrid.innerHTML = ""; rnaGrid.innerHTML = "";
+      for(let i=0; i<dnaSeq.length; ++i) {
+        let box = document.createElement('input'); box.value = dnaSeq[i]; box.readOnly = true;
+        dnaGrid.appendChild(box);
+      }
+      for(let i=0; i<dnaSeq.length; ++i) {
+        let box = document.createElement('input'); box.type="text"; box.maxLength=1;
+        box.autocomplete="off"; rnaGrid.appendChild(box);
+      }
+      setMsg('step1-msg', ''); showBtn('submit1-btn'); hideBtn('go2-btn');
+    }
+    function drawStep2() {
+        document.getElementById('step2-section').classList.remove('hidden');
+        let aminoGrid = document.getElementById('amino-grid');
+        aminoGrid.innerHTML = '';
+        let answerCodons = getTranslationRangeCodons(codons);
+        for(let i=0; i<answerCodons.length; ++i) {
+            let box = document.createElement('input');
+            box.type = "text";
+            box.autocomplete = "off";
+            box.style.width = "4.5em";
+            box.style.fontSize = "1.13em";
+            box.style.marginRight = "0.23em";
+            aminoGrid.appendChild(box);
+        }
+        setMsg('step2-msg', ''); showBtn('submit2-btn'); hideBtn('edit2-btn');
+    }
+    function startTimer(sec) {
+      stopTimer(); timeLeft = sec;
+      setTimer();
+      timer = setInterval(() => {
+        timeLeft--;
+        setTimer();
+        if(timeLeft<=0) {
+          stopTimer();
+          showPopup('종료되었습니다!');
+        }
+      }, 1000);
+    }
+    function setTimer() {
+      let el = document.getElementById('timer');
+      if(timeLeft<=0) el.textContent="";
+      else el.textContent="⏳ "+(timeLeft>=60?Math.floor(timeLeft/60)+":"+('0'+(timeLeft%60)).slice(-2):timeLeft+"초");
+    }
+    function stopTimer() { if(timer){clearInterval(timer);timer=null;} setTimer(); }
+    function showBtn(id){document.getElementById(id).hidden=false;}
+    function hideBtn(id){document.getElementById(id).hidden=true;}
+    function setMsg(id,txt){document.getElementById(id).textContent=txt;}
+    function showPopup(msg) {
+      document.getElementById('popup-msg').textContent = msg;
+      document.getElementById('popup').classList.remove('hidden');
+    }
+    function hidePopup() {
+      document.getElementById('popup').classList.add('hidden');
+    }
+    window.onload = function(){
+      document.getElementById('startBtn').onclick = function() {
+        let len = +document.getElementById('seqLenSel').value, t = +document.getElementById('timeSel').value;
+        dnaSeq = randomDNA(len);
+        rnaAns = transcribe(dnaSeq);
+        codons = rnaToCodons(rnaAns);
+        document.getElementById('step1-section').classList.remove('hidden');
+        document.getElementById('step2-section').classList.add('hidden');
+        drawStep1();
+        showBtn('quitBtn');
+        startTimer(t);
+      };
+      document.getElementById('submit1-btn').onclick = function() {
+        let rnaInputs = Array.from(document.getElementById('rna-grid').children);
+        let userRnaArr = rnaInputs.map(x=>x.value.trim().toUpperCase());
+        let correctRnaArr = rnaAns.split('');
+        let isAllCorrect = true;
+        for(let i=0; i<userRnaArr.length; ++i) {
+          if(userRnaArr[i] === correctRnaArr[i]) {
+            rnaInputs[i].style.background = "#f7fafc";
+          } else {
+            rnaInputs[i].style.background = "#ffeaea";
+            isAllCorrect = false;
+          }
+        }
+        if(userRnaArr.length !== dnaSeq.length) {
+          setMsg('step1-msg',"모든 칸에 RNA 염기를 입력하세요!");
+          return;
+        }
+        if(isAllCorrect) {
+          setMsg('step1-msg',"정답입니다! 2단계로 진행하세요.");
+          showBtn('go2-btn'); hideBtn('submit1-btn');
+        } else {
+          setMsg('step1-msg',"오답이 있습니다. 빨간 칸만 수정하세요.");
+        }
+      };
+      document.getElementById('go2-btn').onclick = function() { drawStep2(); };
+      document.getElementById('submit2-btn').onclick = function() {
+        let aminoInputs = Array.from(document.getElementById('amino-grid').children);
+        let userArr = aminoInputs.map(x => x.value.trim().toLowerCase());
+        let answerCodons = getTranslationRangeCodons(codons);
+        let correctAns = answerCodons.map(c => codonTable[c] || '');
+        // 1. 입력 개수와 정답 개수가 다르면 오답
+        if (userArr.length !== correctAns.length) {
+          setMsg('step2-msg', "오답입니다. 입력 칸의 개수를 확인하세요.");
+          return;
+        }
+        // 2. 입력 중 빈칸이 있으면 오답
+        if (userArr.some(ans => ans === "")) {
+          setMsg('step2-msg', "오답입니다. 모든 칸을 채워주세요.");
+          return;
+        }
+        let isAllCorrect = true;
+        // 기존 정답 표시 삭제
+        aminoInputs.forEach((input, i) => {
+          if(input.nextSibling && input.nextSibling.className === "ans-span") {
+            input.parentNode.removeChild(input.nextSibling);
+          }
+        });
+        for(let i=0; i<correctAns.length; ++i) {
+          if(userArr[i] === correctAns[i]) {
+            aminoInputs[i].style.background = "#f7fafc";
+          } else {
+            aminoInputs[i].style.background = "#ffeaea";
+            isAllCorrect = false;
+          }
+          // 정답 스팬 표시
+          let ansSpan = document.createElement('span');
+          ansSpan.className = "ans-span";
+          ansSpan.style.marginLeft = "0.4em";
+          ansSpan.style.fontSize = "0.97em";
+          ansSpan.style.color = (userArr[i] === correctAns[i]) ? "#155d11" : "#c00";
+          ansSpan.textContent = (userArr[i] === correctAns[i]) ? "" : "정답: " + correctAns[i];
+          aminoInputs[i].after(ansSpan);
+        }
+        if(isAllCorrect) {
+          setMsg('step2-msg',"정답입니다! 🎉");
+          hideBtn('edit2-btn');
+        } else {
+          setMsg('step2-msg',"오답입니다. 각 칸 옆에 정답을 확인하세요.");
+          showBtn('edit2-btn');
+        }
+      };
+      document.getElementById('edit2-btn').onclick = function() { drawStep2(); };
+      document.getElementById('quitBtn').onclick = function() { resetAll(); };
+      document.getElementById('popupQuitBtn').onclick = function() { resetAll(); };
+      document.getElementById('retryBtn').onclick = function() { hidePopup(); resetAll(); };
+    };
+  </script>
+</body>
+</html>

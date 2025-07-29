@@ -4,10 +4,12 @@ st.set_page_config(layout="wide", page_title='DNA sequencying')
 
 import streamlit.components.v1 as htmlviewer
 # Title Msg#1
-st.title('DNA 이중나선의 염기서열 추론하기')
+st.title('DNA로부터 단백질까지')
 
 with open('./index.html','r', encoding='utf-8') as f:
     html = f.read()
+with open('./index2.html', 'r', encoding='utf-8') as f2:
+    html2 = f2.read()
     f.close()
 
 
@@ -34,11 +36,11 @@ with col1:
 
     with st.expander('Contents #2'):
         #st.write(html, unsafe_allow_html=True)
-        htmlviewer.html(html, height=1000, width=1500)
+        htmlviewer.html(html, height=800, width=1500, scrolling=True)
 
     with st.expander('Contents #3'):
         #st.write(html, unsafe_allow_html=True)
-        htmlviewer.html(html, height=1000, width=1500)
+        htmlviewer.html(html2, height=1200, width=1500, scrolling=True)
 
 
 with col2:
