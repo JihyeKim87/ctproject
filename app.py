@@ -3,6 +3,7 @@ import streamlit as st
 st.set_page_config(layout="wide", page_title='DNA sequencying')
 
 import streamlit.components.v1 as htmlviewer
+
 # Title Msg#1
 st.title('DNA로부터 단백질까지')
 
