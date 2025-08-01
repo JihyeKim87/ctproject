@@ -1,6 +1,7 @@
 import streamlit as st
 from Bio import Entrez, SeqIO
 from Bio.Seq import Seq
+import os
 
 st.set_page_config(layout="wide", page_title="DNA 돌연변이와 단백질 변화 실험")
 st.title("돌연변이 실험: DNA → 단백질 변화 관찰 (단계별)")
@@ -35,6 +36,17 @@ def session_reset(start_step=0):
                 # 각 단계 이상은 삭제
                 if steps.get(k, 0) >= start_step:
                     del st.session_state[k]
+
+# HTML 파일 읽기 함수
+def load_html_file(file_path):
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            return file.read()
+    except FileNotFoundError:
+        return None
+    except Exception as e:
+        st.error(f"HTML 파일을 읽는 중 오류 발생: {e}")
+        return None
 
 # (1) 유전자 선택 & DNA/CDS 서열 불러오기
 st.markdown("#### 1️⃣ 유전자 선택/검색")
@@ -103,11 +115,6 @@ if cds_seq:
         st.markdown("#### ▶️ 전사 결과 (RNA)")
         st.code(rna_seq, language="text")
 
-        # -- 전사 이후 리셋 버튼(삭제)
-        # if st.button("전사 결과부터 리셋", help="전사, 번역, 비교 결과만 리셋"):
-        #     session_reset(start_step=1)
-        #     st.experimental_rerun()
-
         # (4) 번역하기 단계
         if st.button("번역하기 (RNA → 단백질)"):
             st.session_state.show_protein = True
@@ -116,11 +123,6 @@ if cds_seq:
             aa_seq = str(Seq(rna_seq).translate(to_stop=False))
             st.markdown("#### ▶️ 번역 결과 (아미노산)")
             st.code(aa_seq, language="text")
-
-            # -- 번역 이후에만 "종료(처음부터)" 버튼(삭제)
-            # if st.button("종료(처음부터)", key="full_reset"):
-            #     session_reset(start_step=0)
-            #     st.experimental_rerun()
 
             # (5) 비교 버튼
             if st.button("공식 단백질 서열과 비교"):
@@ -166,13 +168,22 @@ if cds_seq:
                 else:
                     st.info("UniProt ID가 없어 3D 구조 자동 연결이 불가합니다.")
 
-                # --- 돌연변이 단백질 3D 구조 예측 (Colab 안내) ---
-                st.markdown("### 🧬 돌연변이 단백질 3D 구조 예측")
-                with st.expander("AlphaFold Colab에서 직접 예측해보기"):
-                    st.write("아래 돌연변이 단백질 서열을 복사해 [AlphaFold Colab](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/AlphaFold2_mmseqs2.ipynb)에 입력하면 3D 구조를 볼 수 있습니다.")
+                # --- 단백질 구조 예측 비교 (원본 vs 돌연변이) ---
+                st.markdown("### 🧬 단백질 구조 예측 비교 (원본 vs 돌연변이)")
+                with st.expander("3D 구조 비교 시각화"):
+                    # HTML 파일 로드 및 표시
+                    html_content = load_html_file("3dcartoon.html")
+                    if html_content:
+                        st.components.v1.html(html_content, height=600, scrolling=True)
+                        st.write("위 3D 구조에서 원본과 돌연변이 단백질의 구조 차이를 비교해보세요.")
+                    else:
+                        st.warning("3dcartoon.html 파일을 찾을 수 없습니다. 파일이 같은 디렉토리에 있는지 확인해주세요.")
+                        
+                    # 기존 AlphaFold Colab 안내는 유지
+                    st.markdown("---")
+                    st.write("또는 아래 돌연변이 단백질 서열을 복사해 [AlphaFold Colab](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/AlphaFold2_mmseqs2.ipynb)에 입력하면 3D 구조를 볼 수 있습니다.")
                     st.code(aa_seq, language="text")
                     st.markdown("[AlphaFold Colab 바로가기](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/AlphaFold2_mmseqs2.ipynb)")
-
 
 else:
     st.info("위의 유전자 예시를 선택하거나 accession 번호를 입력하고, CDS 서열을 불러와주세요.")
